@@ -1,4 +1,4 @@
-This code below was taken from a PeopleCode app package to be used as a refactoring exercise.
+The code below was taken from a PeopleCode app package to be used as a refactoring exercise.
 
 ## Packages
 * *original*: Contains the code below translated into Kotlin
