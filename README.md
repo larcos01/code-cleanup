@@ -1,7 +1,7 @@
 The code below was taken from a PeopleCode app package to be used as a refactoring exercise.
 
 ## Packages
-* *original*: Contains the code below translated into Kotlin
+* *original*: contains the code below translated into Kotlin
 * *v1*: refactored without changing the signature of the method
 * *v2*: refactored to use functional interfaces (SAM interfaces)
 * *v3*: refactored using function types
