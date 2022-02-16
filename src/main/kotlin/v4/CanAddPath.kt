@@ -122,7 +122,7 @@ class CanAddPath(
             userId = user.userId,
             pathType = pathType
         ).right().flatMap {
-            if (it >= maxCount) {
+            if (it == 0 || it >= maxCount) {
                 CanAddPathError.MaxPathCountReached.left()
             } else {
                 Unit.right()
