@@ -1,5 +1,6 @@
 package v3
 
+import original.CareerSettings
 import original.PathTypes
 import original.runQuery
 
@@ -15,16 +16,16 @@ object StudentPathChecks {
 
 typealias MaxPathsCount = () -> Int
 
-fun getStudentMaxPathsCount(): MaxPathsCount = { 1 }
-fun getAdvisorMaxPathsCount(): MaxPathsCount = { 2 }
-fun getWhatIfMaxPathsCount(): MaxPathsCount = { 3 }
+fun getStudentMaxPathsCount(settings: CareerSettings): MaxPathsCount = { settings.maxPathsCount }
+fun getAdvisorMaxPathsCount(settings: CareerSettings): MaxPathsCount = { settings.maxAdvisorPathsCount }
+fun getWhatIfMaxPathsCount(settings: CareerSettings): MaxPathsCount = { settings.maxWhatIfPathsCount }
 
-fun getMaxPathsCount(pathType: PathTypes, isStaff: Boolean): MaxPathsCount {
-    if (isStaff) return getAdvisorMaxPathsCount()
+fun getMaxPathsCount(pathType: PathTypes, isStaff: Boolean, settings: CareerSettings): MaxPathsCount {
+    if (isStaff) return getAdvisorMaxPathsCount(settings)
     return if (pathType == PathTypes.WhatIf)
-        getWhatIfMaxPathsCount()
+        getWhatIfMaxPathsCount(settings)
     else
-        getStudentMaxPathsCount()
+        getStudentMaxPathsCount(settings)
 }
 
 fun getPathCount(emplid: String, institutionId: String, acadCareer: String, userId: String, pathType: PathTypes): Int {

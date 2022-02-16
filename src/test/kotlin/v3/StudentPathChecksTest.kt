@@ -1,17 +1,20 @@
 package v3
 
 import org.junit.jupiter.api.Test
+import original.CareerSettings
 import original.PathTypes
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 internal class StudentPathChecksTest {
 
+    private val settings = CareerSettings(1, 2, 3)
+
     @Test
     fun main() {
         fun getPathCount(): Int = 1
         val isStaff = true
-        val maxPathsCount = getMaxPathsCount(PathTypes.WhatIf, isStaff)
+        val maxPathsCount = getMaxPathsCount(PathTypes.WhatIf, isStaff, settings)
         val canAddPath = StudentPathChecks.canAddPath(maxPathsCount) {
             getPathCount()
         }
@@ -20,25 +23,25 @@ internal class StudentPathChecksTest {
 
     @Test
     fun `get student max paths`() {
-        val maxPathsCount = getMaxPathsCount(PathTypes.Standard, false)
+        val maxPathsCount = getMaxPathsCount(PathTypes.Standard, false, settings)
         assertEquals(1, maxPathsCount())
     }
 
     @Test
     fun `get student what-if max paths`() {
-        val maxPathsCount = getMaxPathsCount(PathTypes.WhatIf, false)
+        val maxPathsCount = getMaxPathsCount(PathTypes.WhatIf, false, settings)
         assertEquals(3, maxPathsCount())
     }
 
     @Test
     fun `get staff max paths`() {
-        val maxPathsCount = getMaxPathsCount(PathTypes.Standard, true)
+        val maxPathsCount = getMaxPathsCount(PathTypes.Standard, true, settings)
         assertEquals(2, maxPathsCount())
     }
 
     @Test
     fun `get staff max what-if path`() {
-        val maxPathsCount = getMaxPathsCount(PathTypes.WhatIf, true)
+        val maxPathsCount = getMaxPathsCount(PathTypes.WhatIf, true, settings)
         assertEquals(2, maxPathsCount())
     }
 
