@@ -6,9 +6,7 @@ import arrow.core.toOption
 import io.kotest.assertions.arrow.core.shouldBeLeft
 import io.kotest.assertions.arrow.core.shouldBeRight
 import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.DynamicTest
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestFactory
+import org.junit.jupiter.api.*
 
 class GetCareerSettingsStub(private val settings: Option<CareerSettings> = None) : GetCareerSettings {
     override suspend fun invoke(
@@ -35,6 +33,24 @@ class CanAddPathTest {
         const val USER_ID = "USR"
     }
 
+    @Nested
+    inner class StandardPath : BaseTest {
+        override val pathType: PathType
+            get() = PathType.Standard
+    }
+
+    @Nested
+    inner class WhatIfPath : BaseTest {
+        override val pathType: PathType
+            get() = PathType.WhatIf
+    }
+
+    @Nested
+    inner class PublicWhatIfPath : BaseTest {
+        override val pathType: PathType
+            get() = PathType.PublicWhatIf
+    }
+
     @Test
     fun `given no career settings return career settings not found`() {
         val canAddPath = CanAddPath(
@@ -55,16 +71,18 @@ class CanAddPathTest {
         result shouldBeLeft CanAddPathError.CareerSettingsNotFound
     }
 
-    @TestFactory
-    fun `given zero max count return new path not allowed`() = PathType.values().map { input ->
-        DynamicTest.dynamicTest("for $input") {
+    interface BaseTest {
+        val pathType: PathType
+
+        @Test
+        fun `given zero max count return new path not allowed`() {
             val canAddPath = CanAddPath(
                 getCareerSettings = GetCareerSettingsStub(
                     CareerSettings(
                         maxPathsCount = 0,
-                        maxAdvisorPathsCount = 0,
+                        maxAdvisorPathsCount = 10,
                         maxWhatIfPathsCount = 0,
-                        maxAdvisorWhatIfPathsCount = 0
+                        maxAdvisorWhatIfPathsCount = 10
                     ).toOption()
                 ),
                 getStudentPathCount = GetStudentPathCountStub()
@@ -76,17 +94,42 @@ class CanAddPathTest {
                     academicCareerId = ACADEMIC_CAREER_ID,
                     person = Person(PERSON_ID),
                     user = User(USER_ID, listOf()),
-                    pathType = PathType.Standard,
+                    pathType = pathType,
                 )
             }
 
             result shouldBeLeft CanAddPathError.NewPathNotAllowed
         }
-    }
 
-    @TestFactory
-    fun `given zero student path count return max path count reached`() = PathType.values().map { input ->
-        DynamicTest.dynamicTest("for $input") {
+        @Test
+        fun `given zero max count and has advisor role return new path not allowed`() {
+            val canAddPath = CanAddPath(
+                getCareerSettings = GetCareerSettingsStub(
+                    CareerSettings(
+                        maxPathsCount = 10,
+                        maxAdvisorPathsCount = 0,
+                        maxWhatIfPathsCount = 10,
+                        maxAdvisorWhatIfPathsCount = 0
+                    ).toOption()
+                ),
+                getStudentPathCount = GetStudentPathCountStub()
+            )
+
+            val result = runBlocking {
+                canAddPath(
+                    institutionId = INSTITUTION_ID,
+                    academicCareerId = ACADEMIC_CAREER_ID,
+                    person = Person(PERSON_ID),
+                    user = User(USER_ID, listOf(Role.Advisor)),
+                    pathType = pathType,
+                )
+            }
+
+            result shouldBeLeft CanAddPathError.NewPathNotAllowed
+        }
+
+        @Test
+        fun `given zero student path count for student return max path count reached`() {
             val canAddPath = CanAddPath(
                 getCareerSettings = GetCareerSettingsStub(
                     CareerSettings(
@@ -105,23 +148,75 @@ class CanAddPathTest {
                     academicCareerId = ACADEMIC_CAREER_ID,
                     person = Person(PERSON_ID),
                     user = User(USER_ID, listOf()),
-                    pathType = PathType.Standard,
+                    pathType = pathType,
                 )
             }
 
             result shouldBeLeft CanAddPathError.MaxPathCountReached
         }
-    }
 
-    @TestFactory
-    fun `given student path count equal to max count return max count reached`() = PathType.values().map { input ->
-        DynamicTest.dynamicTest("for $input") {
+        @Test
+        fun `given zero student path count for advisor return max path count reached`() {
             val canAddPath = CanAddPath(
                 getCareerSettings = GetCareerSettingsStub(
                     CareerSettings(
                         maxPathsCount = 1,
                         maxAdvisorPathsCount = 1,
                         maxWhatIfPathsCount = 1,
+                        maxAdvisorWhatIfPathsCount = 1
+                    ).toOption()
+                ),
+                getStudentPathCount = GetStudentPathCountStub(0)
+            )
+
+            val result = runBlocking {
+                canAddPath(
+                    institutionId = INSTITUTION_ID,
+                    academicCareerId = ACADEMIC_CAREER_ID,
+                    person = Person(PERSON_ID),
+                    user = User(USER_ID, listOf(Role.Advisor)),
+                    pathType = pathType,
+                )
+            }
+
+            result shouldBeLeft CanAddPathError.MaxPathCountReached
+        }
+
+        @Test
+        fun `given student path count equal to student max count return max count reached`() {
+            val canAddPath = CanAddPath(
+                getCareerSettings = GetCareerSettingsStub(
+                    CareerSettings(
+                        maxPathsCount = 1,
+                        maxAdvisorPathsCount = 0,
+                        maxWhatIfPathsCount = 1,
+                        maxAdvisorWhatIfPathsCount = 0
+                    ).toOption()
+                ),
+                getStudentPathCount = GetStudentPathCountStub(1)
+            )
+
+            val result = runBlocking {
+                canAddPath(
+                    institutionId = INSTITUTION_ID,
+                    academicCareerId = ACADEMIC_CAREER_ID,
+                    person = Person(PERSON_ID),
+                    user = User(USER_ID, listOf()),
+                    pathType = pathType,
+                )
+            }
+
+            result shouldBeLeft CanAddPathError.MaxPathCountReached
+        }
+
+        @Test
+        fun `given student path count equal to advisor max count return max count reached`() {
+            val canAddPath = CanAddPath(
+                getCareerSettings = GetCareerSettingsStub(
+                    CareerSettings(
+                        maxPathsCount = 0,
+                        maxAdvisorPathsCount = 1,
+                        maxWhatIfPathsCount = 0,
                         maxAdvisorWhatIfPathsCount = 1
                     ).toOption()
                 ),
@@ -133,25 +228,23 @@ class CanAddPathTest {
                     institutionId = INSTITUTION_ID,
                     academicCareerId = ACADEMIC_CAREER_ID,
                     person = Person(PERSON_ID),
-                    user = User(USER_ID, listOf()),
-                    pathType = PathType.Standard,
+                    user = User(USER_ID, listOf(Role.Advisor)),
+                    pathType = pathType,
                 )
             }
 
             result shouldBeLeft CanAddPathError.MaxPathCountReached
         }
-    }
 
-    @TestFactory
-    fun `given student path count greater than max count return success`() = PathType.values().map { input ->
-        DynamicTest.dynamicTest("for $input") {
+        @Test
+        fun `given student path count greater than student max count return success`() {
             val canAddPath = CanAddPath(
                 getCareerSettings = GetCareerSettingsStub(
                     CareerSettings(
                         maxPathsCount = 2,
-                        maxAdvisorPathsCount = 2,
+                        maxAdvisorPathsCount = 0,
                         maxWhatIfPathsCount = 2,
-                        maxAdvisorWhatIfPathsCount = 2
+                        maxAdvisorWhatIfPathsCount = 0
                     ).toOption()
                 ),
                 getStudentPathCount = GetStudentPathCountStub(1)
@@ -163,7 +256,34 @@ class CanAddPathTest {
                     academicCareerId = ACADEMIC_CAREER_ID,
                     person = Person(PERSON_ID),
                     user = User(USER_ID, listOf()),
-                    pathType = PathType.Standard,
+                    pathType = pathType,
+                )
+            }
+
+            result shouldBeRight Unit
+        }
+
+        @Test
+        fun `given student path count greater than advisor max count return success`() {
+            val canAddPath = CanAddPath(
+                getCareerSettings = GetCareerSettingsStub(
+                    CareerSettings(
+                        maxPathsCount = 0,
+                        maxAdvisorPathsCount = 2,
+                        maxWhatIfPathsCount = 0,
+                        maxAdvisorWhatIfPathsCount = 2
+                    ).toOption()
+                ),
+                getStudentPathCount = GetStudentPathCountStub(1)
+            )
+
+            val result = runBlocking {
+                canAddPath(
+                    institutionId = INSTITUTION_ID,
+                    academicCareerId = ACADEMIC_CAREER_ID,
+                    person = Person(PERSON_ID),
+                    user = User(USER_ID, listOf(Role.Advisor)),
+                    pathType = pathType,
                 )
             }
 
